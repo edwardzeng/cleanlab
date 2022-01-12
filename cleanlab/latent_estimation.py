@@ -127,10 +127,16 @@ def calibrate_confident_joint(confident_joint, s, multi_label=False):
     """
 
     if multi_label:
-        s_counts = value_counts([x for lst in s for x in lst])
+        expand_s = [x for lst in s for x in lst]
     else:
-        s_counts = value_counts(s)
+        expand_s = s
     # Calibrate confident joint to have correct p(s) prior on noisy labels.
+
+    K = confident_joint.shape[0]
+    s_counts = np.zeros(K)
+    for label in expand_s:
+        s_counts[label] += 1
+
     calibrated_cj = (
             confident_joint.T / confident_joint.sum(axis=1) * s_counts
     ).T
@@ -164,8 +170,7 @@ def estimate_joint(s, psx=None, confident_joint=None, multi_label=False):
             multi_label=multi_label,
         )
     else:
-        calibrated_cj = calibrate_confident_joint(confident_joint, s,
-                                                  multi_label)
+        calibrated_cj = calibrate_confident_joint(confident_joint, s, multi_label)
 
     return calibrated_cj / float(np.sum(calibrated_cj))
 
@@ -345,7 +350,8 @@ def compute_confident_joint(
 
     # Find the number of unique classes if K is not given
     if K is None:
-        K = len(np.unique(s))
+        # the number of all classes
+        K = psx.shape[1]
 
     # Estimate the probability thresholds for confident counting
     if thresholds is None:
@@ -375,8 +381,8 @@ def compute_confident_joint(
     # y_confident omits meaningless all-False rows
     y_confident = true_label_guess[at_least_one_confident]
     s_confident = s[at_least_one_confident]
-    confident_joint = confusion_matrix(y_confident, s_confident).T
-
+    confident_joint = confusion_matrix(y_confident, s_confident, labels=range(K)).T
+    
     if calibrate:
         confident_joint = calibrate_confident_joint(confident_joint, s)
 

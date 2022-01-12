@@ -149,10 +149,9 @@ def _prune_by_class(k, args=None):
         s, s_counts, prune_count_matrix, psx, multi_label = _get_shared_data()
 
     if s_counts[k] > MIN_NUM_PER_CLASS:  # No prune if not MIN_NUM_PER_CLASS
-        num_errors = s_counts[k] - prune_count_matrix[k][k]
+        num_errors = int(s_counts[k] - prune_count_matrix[k][k])
         # Get rank of smallest prob of class k for examples with noisy label k
-        s_filter = np.array(
-            [k in lst for lst in s]) if multi_label else s == k
+        s_filter = np.array([k in lst for lst in s]) if multi_label else s == k
         class_probs = psx[:, k]
         rank = np.partition(class_probs[s_filter], num_errors)[num_errors]
         return s_filter & (class_probs < rank)
@@ -338,13 +337,19 @@ def get_noise_indices(
     else:
         assert (n_jobs >= 1)
 
-    # Number of examples in each class of s
+    # Number of examples in each class of labels
     if multi_label:
-        s_counts = value_counts([i for lst in s for i in lst])
+        expand_s = [i for lst in s for i in lst]
     else:
-        s_counts = value_counts(s)
+        expand_s = s
+    if not (type(expand_s[0]) is int and (np.array(expand_s) >= 0).all()):
+        raise ValueError("all labels must be integers")
     # Number of classes s
-    K = len(psx.T)
+    K = psx.shape[1]
+    s_counts = np.zeros(K)
+    for label in expand_s:
+        s_counts[label] += 1
+
     # Boolean set to true if dataset is large
     big_dataset = K * len(s) > 1e8
     # Ensure labels are of type np.array()

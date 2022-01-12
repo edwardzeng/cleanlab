@@ -342,7 +342,7 @@ def get_noise_indices(
         expand_s = [i for lst in s for i in lst]
     else:
         expand_s = s
-    if not (type(expand_s[0]) is int and (np.array(expand_s) >= 0).all()):
+    if not (type(expand_s[0]) is np.int64 and (np.array(expand_s) >= 0).all()):
         raise ValueError("all labels must be integers")
     # Number of classes s
     K = psx.shape[1]
